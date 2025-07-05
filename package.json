@@ -1,0 +1,21 @@
+{
+  "name": "trabalho-vis-spotify",
+  "version": "1.0.0",
+  "main": "convert.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Felyppe1/trabalho-vis-spotify.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/Felyppe1/trabalho-vis-spotify/issues"
+  },
+  "homepage": "https://github.com/Felyppe1/trabalho-vis-spotify#readme",
+  "description": ""
+}

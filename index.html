@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spotify - Visualização Interativa Otimizada</title>
+  <link rel="stylesheet" href="index.css" />
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+  <div id="loadingOverlay">
+    <div class="spinner"></div>
+    <div id="progressContainer">
+      <div id="progressBar"></div>
+    </div>
+    <div id="progressText">Carregando dados...</div>
+  </div>
+
+  <div class="container">
+    <h1>Spotify - Análise Visual Interativa</h1>
+
+    <div class="chart" id="chart1">
+      <h2>1. Quais atributos musicais mais influenciam o topo dos rankings diários?</h2>
+      <svg></svg>
+    </div>
+
+    <div class="chart" id="chart2">
+      <h2>2. As músicas estão ficando mais curtas ou mais longas?</h2>
+      <svg></svg>
+    </div>
+
+    <div class="chart" id="chart3">
+      <h2>3. Quais países concentram as músicas mais populares?</h2>
+      <svg></svg>
+    </div>
+
+    <div class="chart" id="chart4">
+      <h2>4. Quais artistas dominam o top 10 diariamente?</h2>
+      <svg></svg>
+    </div>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
