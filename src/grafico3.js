@@ -34,16 +34,22 @@ function renderChart3(data, geoData, onCountryClick) {
     return iso3 && validCountryCodes.has(iso3);
   });
 
+  const filtered2024 = filteredData.filter(d => {
+    const year = new Date(d.snapshot_date).getFullYear();
+    return year === 2024;
+  });
+
   const popularityByCountry = d3.rollup(
-    filteredData,
-    (v) => d3.mean(v, (d) => d.popularity),
-    (d) => iso2to3[d.country.trim().toUpperCase()]
+    filtered2024,
+    v => d3.mean(v, d => d.popularity),
+    d => iso2to3[d.country.trim().toUpperCase()]
   );
 
   const popularityValues = Array.from(popularityByCountry.values());
   const popularityExtent = popularityValues.length
     ? d3.extent(popularityValues)
     : [0, 1];
+
 
   const color = d3
     .scaleSequential()
