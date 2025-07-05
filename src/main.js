@@ -1,11 +1,11 @@
 import { renderChart3 } from "./grafico3.js";
 import { renderChart4 } from "./grafico4.js";
+import { grafico2 } from "./grafico2.js";
 document.addEventListener("DOMContentLoaded", () => {
   const loadingOverlay = document.getElementById("loadingOverlay");
   const progressBar = document.getElementById("progressBar");
   const progressText = document.getElementById("progressText");
 
-  // Carregar CSV com progresso usando fetch manualmente
   async function loadCSVWithProgress(url, onProgress) {
     const response = await fetch(url);
     if (!response.ok)
@@ -50,18 +50,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
       progressText.textContent = "Carregando GeoJSON do mundo...";
       progressBar.style.width = `0%`;
-      // Para GeoJSON, não temos suporte nativo para progresso, vamos só carregar direto
       const geoData = await d3.json("./data/world.geojson");
       console.log("GeoJSON carregado:", geoData.features.length, "features");
 
       progressBar.style.width = "100%";
       progressText.textContent = "Dados carregados. Preparando visualização...";
-      // Aguarde um pouco pra visualizar 100%
       await new Promise((r) => setTimeout(r, 500));
 
       loadingOverlay.style.display = "none";
+    data.forEach(d => {
+        d.album_release_date = new Date(new Date(d.album_release_date).getTime() + 3 * 60 * 60 * 1000);
+    });
 
-      renderChart2(data);
+      grafico2(data);
       renderChart3(data, geoData, function (siglaPais) {
         renderChart4(data, siglaPais);
       });
@@ -72,5 +73,4 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   main();
-
 });
