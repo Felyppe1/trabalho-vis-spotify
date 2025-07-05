@@ -327,7 +327,7 @@ export function grafico2(data) {
 
         brushInfo.style("display", "block").html(`
                 <div style="font-weight: bold; margin-bottom: 12px; color: #333; border-bottom: 2px solid #1DB954; padding-bottom: 8px; font-size: 16px;">
-                    📊 Análise do Período Selecionado: ${periodText}
+                    Análise do Período Selecionado: ${periodText}
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 15px;">
                     <div>
@@ -337,7 +337,7 @@ export function grafico2(data) {
                         )} min</div>
                     </div>
                     <div>
-                        <div style="font-weight: bold; color: #555; margin-bottom: 6px;">Distribuição por Duração:</div>
+                        <div style="font-weight: bold; margin-bottom: 6px;">Distribuição por Duração:</div>
                         <div style="font-size: 13px;">
                             • Menos de 2 min: ${percentages.under2}%<br>
                             • Entre 2-3 min: ${percentages.between2and3}%<br>
@@ -350,7 +350,7 @@ export function grafico2(data) {
                 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                     <div style="background: #fff; padding: 10px; border-radius: 6px; border-left: 4px solid #1DB954;">
-                        <div style="font-weight: bold; color: #555; margin-bottom: 6px;">🎵 Música Mais Curta:</div>
+                        <div style="font-weight: bold; margin-bottom: 6px;">Música Mais Curta:</div>
                         <div style="font-size: 13px;">
                             <strong>"${shortest.name}"</strong><br>
                             por ${shortest.artists}<br>
@@ -360,7 +360,7 @@ export function grafico2(data) {
                         </div>
                     </div>
                     <div style="background: #fff; padding: 10px; border-radius: 6px; border-left: 4px solid #ff6b6b;">
-                        <div style="font-weight: bold; color: #555; margin-bottom: 6px;">🎶 Música Mais Longa:</div>
+                        <div style="font-weight: bold; margin-bottom: 6px;">Música Mais Longa:</div>
                         <div style="font-size: 13px;">
                             <strong>"${longest.name}"</strong><br>
                             por ${longest.artists}<br>
