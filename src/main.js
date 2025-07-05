@@ -6,16 +6,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const progressBar = document.getElementById("progressBar");
   const progressText = document.getElementById("progressText");
 
-  // Função para amostragem aleatória
-  function sampleArray(arr, size) {
-    const shuffled = arr.slice();
-    for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    return shuffled.slice(0, size);
-  }
-
   // Carregar CSV com progresso usando fetch manualmente
   async function loadCSVWithProgress(url, onProgress) {
     const response = await fetch(url);
@@ -72,13 +62,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
       loadingOverlay.style.display = "none";
 
-      // Amostragem: pegar 10k registros aleatórios para os gráficos de pontos
-      const sampleSize = 10000;
-      const sampledData = sampleArray(data, sampleSize);
-      console.log("Dados amostrados para visualização:", sampledData.length);
-
-      renderChart1(sampledData);
-      renderChart2(sampledData);
+      renderChart1(data);
+      renderChart2(data);
       renderChart3(data, geoData); // mapa usa dados completos (agregado)
       renderChart4(data); // top10 artistas - só filtra no método
     } catch (error) {

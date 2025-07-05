@@ -87,3 +87,7 @@ svg {
   pointer-events: none;
 }
 
+.tooltip svg {
+  max-height: 90px;
+  display: block;
+}
