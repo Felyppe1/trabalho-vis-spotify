@@ -1,91 +1,185 @@
-// Função util para quebrar artistas
-function getArtists(value) {
-  if (typeof value === "string") {
-    return value.split(",").map(a => a.trim());
-  }
-  return [];
-}
-
-function renderChart4(data) {
+function renderChart4(data, siglaPais) {
   const svg = d3.select("#chart4 svg");
   svg.selectAll("*").remove();
 
   const width = svg.node().clientWidth;
   const height = svg.node().clientHeight;
-  const margin = { top: 20, right: 30, bottom: 50, left: 150 };
+  const margin = { top: 40, right: 30, bottom: 80, left: 150 };
 
-  const top10_2024 = data.filter((d) => {
-    const date = new Date(d.snapshot_date);
-    return d.daily_rank && +d.daily_rank <= 10 && date.getFullYear() === 2024;
+  const filtered = data.filter((d) => {
+    return d.country === siglaPais && new Date(d.snapshot_date).getFullYear() === 2024;
   });
 
-  const artistCounts = new Map();
-  top10_2024.forEach((d) => {
-    const artistas = getArtists(d.artists);
-    artistas.forEach((artista) => {
-      artistCounts.set(artista, (artistCounts.get(artista) || 0) + 1);
-    });
+  // Separar artistas
+  const allTracks = filtered.flatMap((d) => {
+    const artists = d.artists.split(",").map((a) => a.trim());
+    return artists.map((artist) => ({
+      ...d,
+      artist,
+    }));
   });
 
-  const counts = Array.from(artistCounts.entries())
+  // Score por artista (quanto menor o rank, maior a pontuação)
+  const scoreByArtist = d3.rollups(
+    allTracks,
+    (v) => d3.sum(v, (d) => 51 - d.daily_rank),
+    (d) => d.artist
+  );
+
+  // Top 10 por score
+  const top10 = scoreByArtist
     .sort((a, b) => d3.descending(a[1], b[1]))
-    .slice(0, 10);
+    .slice(0, 10)
+    .map(([artist, score]) => ({ artist, score }));
 
-  const y = d3.scaleBand()
-    .domain(counts.map(d => d[0]))
+  // Quantidade de músicas no top 50 por artista
+  const songCount = d3.rollups(
+    allTracks.filter((d) => d.daily_rank <= 50),
+    (v) => new Set(v.map((d) => d.spotify_id)).size,
+    (d) => d.artist
+  );
+
+  const songCountMap = new Map(songCount);
+
+  // Linha: posição mínima por mês
+  const lineDataByArtist = d3.rollups(
+    allTracks.filter((d) => top10.some((a) => a.artist === d.artist)),
+    (v) => d3.min(v, (d) => d.daily_rank),
+    (d) => d.artist,
+    (d) => new Date(d.snapshot_date).getMonth() + 1
+  );
+
+  const lineMap = new Map();
+  lineDataByArtist.forEach(([artist, values]) => {
+    lineMap.set(
+      artist,
+      values.map(([month, rank]) => ({ month, rank }))
+    );
+  });
+
+  // Escalas
+  const x = d3
+    .scaleLinear()
+    .domain([0, d3.max(top10, (d) => d.score)])
+    .range([margin.left, width - margin.right]);
+
+  const y = d3
+    .scaleBand()
+    .domain(top10.map((d) => d.artist))
     .range([margin.top, height - margin.bottom])
     .padding(0.1);
 
-  const x = d3.scaleLinear()
-    .domain([0, d3.max(counts, d => d[1])])
-    .range([margin.left, width - margin.right]);
+  const color = d3.scaleOrdinal(d3.schemeTableau10);
 
-  svg.append("g")
-    .attr("transform", `translate(0,${height - margin.bottom})`)
-    .call(d3.axisBottom(x).ticks(5).tickFormat(d3.format("d")));
+  // Eixos
+  svg
+    .append("g")
+    .attr("transform", `translate(0,${margin.top})`)
+    .call(d3.axisTop(x))
+    .selectAll("text")
+    .style("font-size", "12px");
 
-  svg.append("g")
+  svg
+    .append("g")
     .attr("transform", `translate(${margin.left},0)`)
-    .call(d3.axisLeft(y));
+    .call(d3.axisLeft(y))
+    .selectAll("text")
+    .style("font-size", "12px");
 
-  const tooltip = d3.select("body")
-    .selectAll(".tooltip")
-    .data([null])
-    .join("div")
+  // Tooltip com linha
+  const tooltip = d3
+    .select("body")
+    .append("div")
     .attr("class", "tooltip")
     .style("position", "absolute")
-    .style("padding", "12px")
-    .style("background", "white")
+    .style("background", "#fff")
+    .style("padding", "10px")
     .style("border", "1px solid #ccc")
     .style("border-radius", "6px")
-    .style("font-size", "14px")
     .style("pointer-events", "none")
-    .style("opacity", 0)
-    .style("box-shadow", "0 3px 8px rgba(0,0,0,0.15)");
+    .style("font-size", "14px")
+    .style("opacity", 0);
 
-  svg.selectAll("rect")
-    .data(counts)
+  // Barras
+  svg
+    .selectAll("rect")
+    .data(top10)
     .join("rect")
-    .attr("x", margin.left)
-    .attr("y", d => y(d[0]))
-    .attr("width", d => x(d[1]) - margin.left)
+    .attr("x", x(0))
+    .attr("y", (d) => y(d.artist))
+    .attr("width", (d) => x(d.score) - x(0))
     .attr("height", y.bandwidth())
-    .attr("fill", "#1db954")
+    .attr("fill", (d) => color(d.artist))
     .on("mouseover", function (event, d) {
-      d3.select(this).attr("fill", "#128c43");
-      tooltip.style("opacity", 1)
-        .html(`<strong>${d[0]}</strong><br>Entradas no Top 10: ${d[1]}`)
+      const lines = lineMap.get(d.artist) || [];
+      const totalSongs = songCountMap.get(d.artist) || 0;
+
+      const widthTooltip = 300;
+      const heightTooltip = 100;
+      const marginTooltip = { left: 40, right: 20, top: 20, bottom: 30 };
+
+      const xTooltip = d3.scaleLinear().domain([1, 12]).range([marginTooltip.left, widthTooltip - marginTooltip.right]);
+      const yTooltip = d3.scaleLinear().domain([50, 1]).range([heightTooltip - marginTooltip.bottom, marginTooltip.top]);
+
+      const points = lines
+        .map(p => `${xTooltip(p.month)},${yTooltip(p.rank)}`)
+        .join(" ");
+
+      const monthsLabels = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+      const xAxisLabels = monthsLabels.map((m, i) => `<text x="${xTooltip(i + 1)}" y="${heightTooltip - 10}" font-size="10" text-anchor="middle">${m}</text>`).join("");
+
+      const yTicks = [1, 13, 25, 37, 50];
+      const yAxisTicks = yTicks.map(t => `<text x="${marginTooltip.left - 5}" y="${yTooltip(t) + 4}" font-size="10" text-anchor="end">${t}</text>`).join("");
+      const yAxisLines = yTicks.map(t => `<line x1="${marginTooltip.left}" y1="${yTooltip(t)}" x2="${widthTooltip - marginTooltip.right}" y2="${yTooltip(t)}" stroke="#eee" stroke-width="1"/>`).join("");
+
+      const circlesAndLabels = lines.map(p => {
+        const cx = xTooltip(p.month);
+        const cy = yTooltip(p.rank);
+        return `
+          <circle cx="${cx}" cy="${cy}" r="3" fill="#0077b6" />
+          <text x="${cx + 5}" y="${cy + 4}" font-size="9" fill="#333">${p.rank}</text>
+        `;
+      }).join("");
+
+      tooltip
+        .style("opacity", 1)
+        .html(`
+          <strong>${d.artist}</strong><br/>
+          Músicas no Top 50: ${totalSongs}<br/>
+          <svg width="${widthTooltip}" height="${heightTooltip}">
+            ${yAxisLines}
+            ${yAxisTicks}
+            <polyline
+              fill="none"
+              stroke="#0077b6"
+              stroke-width="2"
+              points="${points}"
+            />
+            ${circlesAndLabels}
+            ${xAxisLabels}
+          </svg>
+        `)
         .style("left", event.pageX + 15 + "px")
-        .style("top", event.pageY - 20 + "px");
+        .style("top", event.pageY - heightTooltip - 40 + "px");
     })
+
     .on("mousemove", function (event) {
-      tooltip.style("left", event.pageX + 15 + "px")
-        .style("top", event.pageY - 20 + "px");
+      tooltip
+        .style("left", event.pageX + 15 + "px")
+        .style("top", event.pageY - 30 + "px");
     })
     .on("mouseout", function () {
-      d3.select(this).attr("fill", "#1db954");
       tooltip.style("opacity", 0);
     });
+
+  // Título
+  svg
+    .append("text")
+    .attr("x", margin.left)
+    .attr("y", margin.top - 20)
+    .style("font-size", "16px")
+    .style("font-weight", "bold")
+    .text(`Top 10 artistas em ${siglaPais} (2024)`);
 }
 
 export { renderChart4 };
