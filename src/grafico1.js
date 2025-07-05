@@ -1,3 +1,11 @@
+// Função util para quebrar artistas
+function getArtists(value) {
+  if (typeof value === "string") {
+    return value.split(",").map(a => a.trim());
+  }
+  return [];
+}
+
 function renderChart1(data) {
   const svg = d3.select("#chart1 svg");
   svg.selectAll("*").remove();
@@ -17,50 +25,31 @@ function renderChart1(data) {
     valence: "Valência",
     acousticness: "Acústica"
   };
-
   const attrs = Object.keys(attrLabels);
-
-  // Função auxiliar para separar artistas
-  function getArtists(value) {
-    if (typeof value === "string") {
-      return value.split(",").map(a => a.trim());
-    }
-    if (Array.isArray(value)) {
-      return value.map(a => a.trim());
-    }
-    return [];
-  }
 
   const averages = attrs.map((attr) => {
     const mean = d3.mean(top50_2024, (d) => +d[attr]);
 
     const artistMap = new Map();
 
-    top50_2024
-      .filter(d => d[attr] !== undefined)
-      .sort((a, b) => +b[attr] - +a[attr])
-      .forEach(d => {
-        const artists = getArtists(d.artists);
-        artists.forEach(artist => {
-          if (!artistMap.has(artist)) {
-            artistMap.set(artist, {
-              name: artist,
-              rank: +d.daily_rank,
-              valor: +d[attr]
-            });
-          }
-        });
+    top50_2024.forEach((d) => {
+      const artists = getArtists(d.artists);
+      artists.forEach((artist) => {
+        if (!artistMap.has(artist) || +d[attr] > artistMap.get(artist).valor) {
+          artistMap.set(artist, {
+            name: artist,
+            rank: +d.daily_rank,
+            valor: +d[attr]
+          });
+        }
       });
+    });
 
     const topArtists = Array.from(artistMap.values())
       .sort((a, b) => b.valor - a.valor)
       .slice(0, 3);
 
-    return {
-      attr,
-      mean,
-      topArtists
-    };
+    return { attr, mean, topArtists };
   });
 
   const x = d3.scaleBand()
@@ -112,23 +101,18 @@ function renderChart1(data) {
       const tooltipText = `
         <strong>${attrLabels[d.attr]}</strong><br>
         Média: ${d.mean.toFixed(2)}<br><br>
-        ${d.topArtists
-          .map(
-            (artist, i) =>
-              `${i + 1}º: ${artist.name} (Posição: ${artist.rank})`
-          )
-          .join("<br>")}
+        ${d.topArtists.map(
+          (artist, i) => `${i + 1}º: ${artist.name} (Posição: ${artist.rank})`
+        ).join("<br>")}
       `;
 
-      tooltip
-        .style("opacity", 1)
+      tooltip.style("opacity", 1)
         .html(tooltipText)
         .style("left", event.pageX + 15 + "px")
         .style("top", event.pageY - 20 + "px");
     })
     .on("mousemove", function (event) {
-      tooltip
-        .style("left", event.pageX + 15 + "px")
+      tooltip.style("left", event.pageX + 15 + "px")
         .style("top", event.pageY - 20 + "px");
     })
     .on("mouseout", function () {
