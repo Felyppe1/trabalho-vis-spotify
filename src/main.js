@@ -297,8 +297,34 @@ document.addEventListener("DOMContentLoaded", () => {
       .style("opacity", 0)
       .style("box-shadow", "0 4px 8px rgba(0,0,0,0.15)")
       .style("max-width", "320px")
-      .style("line-height", "1.4");
+      .style("line-height", "1.4"); // Adicionar brush primeiro (atrás dos círculos)
+    const brush = d3
+      .brushX()
+      .extent([
+        [margin.left, margin.top],
+        [width - margin.right, height - margin.bottom],
+      ])
+      .on("brush end", brushed);
 
+    svg.append("g").attr("class", "brush").call(brush);
+
+    // Criar painel de informações do brush
+    const brushInfo = d3
+      .select("#chart2")
+      .selectAll(".brush-info")
+      .data([null])
+      .join("div")
+      .attr("class", "brush-info")
+      .style("margin-top", "10px")
+      .style("padding", "10px")
+      .style("background", "#f8f9fa")
+      .style("border", "1px solid #dee2e6")
+      .style("border-radius", "6px")
+      .style("font-size", "13px")
+      .style("line-height", "1.4")
+      .style("display", "none");
+
+    // Adicionar círculos por último (na frente do brush) para manter a interatividade
     svg
       .selectAll("circle")
       .data(avgDurationByYear)
@@ -307,6 +333,7 @@ document.addEventListener("DOMContentLoaded", () => {
       .attr("cy", (d) => y(d[1]))
       .attr("r", 4)
       .attr("fill", "#ff7f0e")
+      .style("pointer-events", "all") // Garantir que os eventos de mouse funcionem
       .on("mouseover", function (event, d) {
         d3.select(this).attr("fill", "#c25100");
 
@@ -364,6 +391,127 @@ document.addEventListener("DOMContentLoaded", () => {
         d3.select(this).attr("fill", "#ff7f0e");
         tooltip.style("opacity", 0);
       });
+
+    function brushed(event) {
+      const selection = event.selection;
+
+      if (!selection) {
+        brushInfo.style("display", "none");
+        return;
+      }
+
+      // Converter coordenadas do brush para anos
+      const [x0, x1] = selection.map(x.invert);
+
+      // Filtrar dados para os anos selecionados
+      const selectedYears = statsByYear.filter((d) => d[0] >= x0 && d[0] <= x1);
+
+      if (selectedYears.length === 0) {
+        brushInfo.style("display", "none");
+        return;
+      }
+
+      // Calcular estatísticas agregadas para o período selecionado
+      const allSongsInPeriod = [];
+      selectedYears.forEach(([year, stats]) => {
+        // Buscar todas as músicas deste ano nos dados originais
+        const songsInYear = data.filter(
+          (d) =>
+            d.album_release_date &&
+            d.duration_ms &&
+            new Date(d.album_release_date).getFullYear() === year
+        );
+        allSongsInPeriod.push(...songsInYear);
+      });
+
+      if (allSongsInPeriod.length === 0) {
+        brushInfo.style("display", "none");
+        return;
+      }
+
+      // Calcular estatísticas para o período completo
+      const durations = allSongsInPeriod.map((d) => d.duration_ms / 60000);
+      const avgDuration = d3.mean(durations);
+
+      const total = allSongsInPeriod.length;
+      const under2 = allSongsInPeriod.filter(
+        (d) => d.duration_ms / 60000 < 2
+      ).length;
+      const between2and3 = allSongsInPeriod.filter((d) => {
+        const min = d.duration_ms / 60000;
+        return min >= 2 && min < 3;
+      }).length;
+      const between3and4 = allSongsInPeriod.filter((d) => {
+        const min = d.duration_ms / 60000;
+        return min >= 3 && min < 4;
+      }).length;
+      const between4and5 = allSongsInPeriod.filter((d) => {
+        const min = d.duration_ms / 60000;
+        return min >= 4 && min < 5;
+      }).length;
+      const over5 = allSongsInPeriod.filter(
+        (d) => d.duration_ms / 60000 >= 5
+      ).length;
+
+      const shortest = allSongsInPeriod.reduce((a, b) =>
+        a.duration_ms < b.duration_ms ? a : b
+      );
+      const longest = allSongsInPeriod.reduce((a, b) =>
+        a.duration_ms > b.duration_ms ? a : b
+      );
+
+      const percentages = {
+        under2: ((under2 / total) * 100).toFixed(1),
+        between2and3: ((between2and3 / total) * 100).toFixed(1),
+        between3and4: ((between3and4 / total) * 100).toFixed(1),
+        between4and5: ((between4and5 / total) * 100).toFixed(1),
+        over5: ((over5 / total) * 100).toFixed(1),
+      };
+
+      const startYear = Math.floor(x0);
+      const endYear = Math.ceil(x1);
+      const periodText =
+        startYear === endYear ? startYear : `${startYear} - ${endYear}`;
+      brushInfo.style("display", "block").html(`
+          <div style="font-weight: bold; margin-bottom: 8px; color: #333; border-bottom: 1px solid #dee2e6; padding-bottom: 5px;">
+            📊 Análise do Período Selecionado: ${periodText}
+          </div>
+          <div style="margin-bottom: 6px;"><strong>Total de músicas:</strong> ${total.toLocaleString()}</div>
+          <div style="margin-bottom: 6px;"><strong>Duração Média:</strong> ${avgDuration.toFixed(
+            2
+          )} min</div>
+          
+          <div style="margin-bottom: 4px; font-weight: bold; color: #555;">Distribuição por Duração:</div>
+          <div style="margin-left: 8px; margin-bottom: 6px;">
+            • Menos de 2 min: ${percentages.under2}%<br>
+            • Entre 2-3 min: ${percentages.between2and3}%<br>
+            • Entre 3-4 min: ${percentages.between3and4}%<br>
+            • Entre 4-5 min: ${percentages.between4and5}%<br>
+            • Mais de 5 min: ${percentages.over5}%
+          </div>
+          
+          <div style="margin-bottom: 4px; font-weight: bold; color: #555;">Extremos do Período:</div>
+          <div style="margin-left: 8px;">
+            <div style="margin-bottom: 3px;">
+              <strong>Mais Curta:</strong><br>
+              "${shortest.name}" - ${shortest.artists}<br>
+              <span style="color: #666;">${(
+                shortest.duration_ms / 60000
+              ).toFixed(2)} min</span>
+            </div>
+            <div>
+              <strong>Mais Longa:</strong><br>
+              "${longest.name}" - ${longest.artists}<br>
+              <span style="color: #666;">${(
+                longest.duration_ms / 60000
+              ).toFixed(2)} min</span>
+            </div>
+          </div>
+          <div style="margin-top: 8px; padding-top: 6px; border-top: 1px solid #dee2e6; font-size: 12px; color: #666;">
+            💡 Passe o mouse sobre os pontos individuais para ver dados específicos de cada ano
+          </div>
+        `);
+    }
   }
 
   function renderChart3(data, geoData) {
