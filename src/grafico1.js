@@ -8,11 +8,7 @@ function renderChart1(data) {
 
   const top50_2024 = data.filter((d) => {
     const date = new Date(d.snapshot_date);
-    return (
-      d.daily_rank &&
-      +d.daily_rank <= 50 &&
-      date.getFullYear() === 2024
-    );
+    return d.daily_rank && +d.daily_rank <= 50 && date.getFullYear() === 2024;
   });
 
   const attrLabels = {
@@ -21,50 +17,73 @@ function renderChart1(data) {
     valence: "Valência",
     acousticness: "Acústica"
   };
+
   const attrs = Object.keys(attrLabels);
+
+  // Função auxiliar para separar artistas
+  function getArtists(value) {
+    if (typeof value === "string") {
+      return value.split(",").map(a => a.trim());
+    }
+    if (Array.isArray(value)) {
+      return value.map(a => a.trim());
+    }
+    return [];
+  }
 
   const averages = attrs.map((attr) => {
     const mean = d3.mean(top50_2024, (d) => +d[attr]);
-  
-    const topArtists = top50_2024
+
+    const artistMap = new Map();
+
+    top50_2024
       .filter(d => d[attr] !== undefined)
       .sort((a, b) => +b[attr] - +a[attr])
-      .slice(0, 3)
-      .map(d => ({
-        name: d.artists,
-        rank: +d.daily_rank,
-        valor: +d[attr]
-      }));
+      .forEach(d => {
+        const artists = getArtists(d.artists);
+        artists.forEach(artist => {
+          if (!artistMap.has(artist)) {
+            artistMap.set(artist, {
+              name: artist,
+              rank: +d.daily_rank,
+              valor: +d[attr]
+            });
+          }
+        });
+      });
 
-    return { attr, mean, topArtists };
+    const topArtists = Array.from(artistMap.values())
+      .sort((a, b) => b.valor - a.valor)
+      .slice(0, 3);
+
+    return {
+      attr,
+      mean,
+      topArtists
+    };
   });
 
-  const x = d3
-    .scaleBand()
+  const x = d3.scaleBand()
     .domain(attrs.map((a) => attrLabels[a]))
     .range([margin.left, width - margin.right])
     .padding(0.3);
 
-  const y = d3
-    .scaleLinear()
+  const y = d3.scaleLinear()
     .domain([0, 1])
     .range([height - margin.bottom, margin.top]);
 
-  svg
-    .append("g")
+  svg.append("g")
     .attr("transform", `translate(0,${height - margin.bottom})`)
     .call(d3.axisBottom(x))
     .selectAll("text")
     .attr("transform", "rotate(-40)")
     .style("text-anchor", "end");
 
-  svg
-    .append("g")
+  svg.append("g")
     .attr("transform", `translate(${margin.left},0)`)
     .call(d3.axisLeft(y));
 
-  const tooltip = d3
-    .select("body")
+  const tooltip = d3.select("body")
     .selectAll(".tooltip")
     .data([null])
     .join("div")
@@ -79,8 +98,7 @@ function renderChart1(data) {
     .style("opacity", 0)
     .style("box-shadow", "0 2px 5px rgba(0,0,0,0.1)");
 
-  svg
-    .selectAll("rect")
+  svg.selectAll("rect")
     .data(averages)
     .join("rect")
     .attr("x", (d) => x(attrLabels[d.attr]))
