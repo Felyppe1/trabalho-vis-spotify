@@ -98,10 +98,10 @@ svg {
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
-.tooltip svg {
+/* .tooltip svg {
   max-height: 90px;
   display: block;
-}
+} */
 #chart2 .dot {
     transition: r 0.2s ease, fill 0.2s ease;
     cursor: pointer;
@@ -162,3 +162,45 @@ svg {
 .brush-info:hover {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
+
+/* body {
+    background-color: #fff;
+    color: #111;
+    font-family: Arial, sans-serif;
+    margin: 30px;
+} */
+
+/* h2 {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+#order {
+    font-size: 14px;
+    padding: 5px;
+    margin-bottom: 20px;
+    display: inline-block;
+}
+
+#heatmap {
+    position: relative;
+    margin: auto;
+    width: max-content;
+}
+
+.tooltip {
+    position: absolute;
+    background-color: #1db954;
+    color: white;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    pointer-events: none;
+    box-shadow: 0 0 8px rgba(0,0,0,0.2);
+    display: none;
+    z-index: 10;
+}
+
+.cell {
+    cursor: pointer;
+} */

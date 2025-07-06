@@ -20,8 +20,19 @@
     <h1>Spotify - Análise Visual Interativa</h1>
 
     <div class="chart" id="chart1">
-      <h2>1. Artistas que mais colaboraram entre si</h2>
-      <svg></svg>
+        <h2>1. Artistas que mais colaboraram entre si em 2024</h2>
+
+        <div style="text-align:center; margin-bottom: 10px;">
+            Ordem: 
+            <select id="order">
+            <option value="name">Por nome</option>
+            <option value="count">Por número de colaborações</option>
+            <option value="cluster" selected>Por similaridade</option>
+            </select>
+        </div>
+
+        <div id="heatmap"></div>
+
     </div>
 
     <div class="chart" id="chart2">
@@ -41,5 +52,7 @@
   </div>
 
   <script type="module" src="src/main.js"></script>
+  <script type="module" src="./src/grafico1.js"></script>
+
 </body>
 </html>
