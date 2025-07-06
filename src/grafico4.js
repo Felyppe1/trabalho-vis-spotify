@@ -2,10 +2,10 @@ function renderChart4(data, siglaPais) {
   const svg = d3.select("#chart4 svg");
   svg.selectAll("*").remove();
 
-    if (siglaPais === "NENHUM") {
-      d3.select("#chart4 h2").text("");
-      return;
-    }
+  if (siglaPais === "NENHUM") {
+    d3.select("#chart4 h2").text("");
+    return;
+  }
 
   const width = svg.node().clientWidth;
   const height = svg.node().clientHeight;
@@ -15,7 +15,6 @@ function renderChart4(data, siglaPais) {
     return d.country === siglaPais && new Date(d.snapshot_date).getFullYear() === 2024;
   });
 
-  // Separar artistas
   const allTracks = filtered.flatMap((d) => {
     const artists = d.artists.split(",").map((a) => a.trim());
     return artists.map((artist) => ({
@@ -24,29 +23,24 @@ function renderChart4(data, siglaPais) {
     }));
   });
 
-  // Score por artista (quanto menor o rank, maior a pontuação)
   const scoreByArtist = d3.rollups(
     allTracks,
     (v) => d3.sum(v, (d) => 51 - d.daily_rank),
     (d) => d.artist
   );
 
-  // Top 10 por score
   const top10 = scoreByArtist
     .sort((a, b) => d3.descending(a[1], b[1]))
     .slice(0, 10)
     .map(([artist, score]) => ({ artist, score }));
 
-  // Quantidade de músicas no top 50 por artista
   const songCount = d3.rollups(
     allTracks.filter((d) => d.daily_rank <= 50),
     (v) => new Set(v.map((d) => d.spotify_id)).size,
     (d) => d.artist
   );
-
   const songCountMap = new Map(songCount);
 
-  // Linha: posição mínima por mês
   const lineDataByArtist = d3.rollups(
     allTracks.filter((d) => top10.some((a) => a.artist === d.artist)),
     (v) => d3.min(v, (d) => d.daily_rank),
@@ -62,7 +56,6 @@ function renderChart4(data, siglaPais) {
     );
   });
 
-  // Escalas
   const x = d3
     .scaleLinear()
     .domain([0, d3.max(top10, (d) => d.score)])
@@ -74,9 +67,11 @@ function renderChart4(data, siglaPais) {
     .range([margin.top, height - margin.bottom])
     .padding(0.1);
 
-  const color = d3.scaleOrdinal(d3.schemeTableau10);
+  // Degradê de verde para os 10 artistas
+  const color = d3.scaleOrdinal()
+    .domain(top10.map((_, i) => i))
+    .range(d3.range(0, 1, 1 / 10).map(t => d3.interpolateGreens(1 - t * 0.6)));
 
-  // Eixos
   svg
     .append("g")
     .attr("transform", `translate(0,${margin.top})`)
@@ -91,7 +86,6 @@ function renderChart4(data, siglaPais) {
     .selectAll("text")
     .style("font-size", "12px");
 
-  // Tooltip com linha
   const tooltip = d3
     .select("body")
     .append("div")
@@ -105,7 +99,6 @@ function renderChart4(data, siglaPais) {
     .style("font-size", "14px")
     .style("opacity", 0);
 
-  // Barras
   svg
     .selectAll("rect")
     .data(top10)
@@ -114,7 +107,7 @@ function renderChart4(data, siglaPais) {
     .attr("y", (d) => y(d.artist))
     .attr("width", (d) => x(d.score) - x(0))
     .attr("height", y.bandwidth())
-    .attr("fill", (d) => color(d.artist))
+    .attr("fill", (_, i) => color(i))
     .on("mouseover", function (event, d) {
       const lines = lineMap.get(d.artist) || [];
       const totalSongs = songCountMap.get(d.artist) || 0;
@@ -167,7 +160,6 @@ function renderChart4(data, siglaPais) {
         .style("left", event.pageX + 15 + "px")
         .style("top", event.pageY - heightTooltip - 40 + "px");
     })
-
     .on("mousemove", function (event) {
       tooltip
         .style("left", event.pageX + 15 + "px")
