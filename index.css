@@ -178,3 +178,17 @@ h1 img {
   height: 50vh;
   display: block;
 }
+
+.tooltip-heatmap {
+  position: absolute;
+  background-color: #1db954;
+  color: white;
+  padding: 5px;
+  border-radius: 4px;
+  font-size: 12px;
+  pointer-events: none;
+  z-index: 999;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  transition: opacity 0.2s ease;
+}
+

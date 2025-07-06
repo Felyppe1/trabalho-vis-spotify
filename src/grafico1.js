@@ -15,15 +15,8 @@ const svg = d3.select("#heatmap")
 
 const tooltip = d3.select("#heatmap")
   .append("div")
-  .attr("class", "tooltip")
-  .style("opacity", 0)
-  .style("position", "absolute")
-  .style("background-color", "#1db954")
-  .style("color", "white")
-  .style("padding", "5px")
-  .style("border-radius", "4px")
-  .style("font-size", "12px")
-  .style("pointer-events", "none");
+  .attr("class", "tooltip-heatmap") // Classe exclusiva
+  .style("opacity", 0);
 
 const parseDate = d3.timeParse("%Y-%m-%d");
 function isIn2024(dateStr) {
@@ -140,8 +133,8 @@ d3.csv("../data/spotify.csv").then(data => {
 
   const maxCollab = d3.max(matrix.flat());
   const color = d3.scaleSequential()
-    .interpolator(t => d3.interpolateGreens(t * 0.8 + 0.2)) // tons mais escuros
-    .domain([1, maxCollab]); // ignora 0
+    .interpolator(t => d3.interpolateGreens(t * 0.8 + 0.2))
+    .domain([1, maxCollab]);
 
   const row = svg.selectAll(".row")
     .data(orders[initialOrder])
@@ -177,16 +170,19 @@ d3.csv("../data/spotify.csv").then(data => {
         const rowArtist = artists[d.y];
         const colArtist = artists[d.x];
 
-        tooltip.style("display", "block")
+        tooltip
           .style("opacity", 1)
           .html(
             `<strong>${rowArtist.name}</strong>: ${rowArtist.count} colaboração(ões)<br>` +
             `<strong>${rowArtist.name}</strong> & <strong>${colArtist.name}</strong>: ${d.value} música(s) juntos`
-          )
-          .style("left", `${(width + margin.left) / 2}px`)
-          .style("top", `${margin.top / 2}px`);
+          );
       })
-      .on("mouseout", () => tooltip.style("opacity", 0).style("display", "none"));
+      .on("mousemove", function (event) {
+        tooltip
+          .style("left", `${event.pageX + 15}px`)
+          .style("top", `${event.pageY - 40}px`);
+      })
+      .on("mouseout", () => tooltip.style("opacity", 0));
   });
 
   const col = svg.selectAll(".column")
