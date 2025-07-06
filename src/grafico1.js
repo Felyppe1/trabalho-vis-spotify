@@ -15,11 +15,11 @@ const svg = d3.select("#heatmap")
 
 const tooltip = d3.select("#heatmap")
   .append("div")
-  .attr("class", "tooltip1")
+  .attr("class", "tooltip")
   .style("opacity", 0)
   .style("position", "absolute")
-  .style("background-color", "white")
-//   .style("color", "white")
+  .style("background-color", "#1db954")
+  .style("color", "white")
   .style("padding", "5px")
   .style("border-radius", "4px")
   .style("font-size", "12px")
@@ -85,9 +85,9 @@ d3.csv("../data/spotify.csv").then(data => {
   function clusterOrder() {
     const order = [];
     const used = new Set();
-
     let current = 0;
     let maxCount = -1;
+
     for (let i = 0; i < numArtists; i++) {
       if (artists[i].count > maxCount) {
         maxCount = artists[i].count;
@@ -118,28 +118,33 @@ d3.csv("../data/spotify.csv").then(data => {
           }
         }
       }
+
       used.add(next);
       order.push(next);
     }
+
     return order;
   }
 
   const orders = {
-    name: d3.range(numArtists).sort((a, b) => d3.ascending(artists[a].name, artists[b].name)),
+    name: d3.range(numArtists).sort((a, b) =>
+      artists[a].name.localeCompare(artists[b].name, 'pt', { sensitivity: 'base' })
+    ),
     count: d3.range(numArtists).sort((a, b) => artists[b].count - artists[a].count),
     cluster: clusterOrder()
   };
 
-  const x = d3.scaleBand().range([0, width]).domain(orders.cluster).padding(0.05);
-  const y = d3.scaleBand().range([0, height]).domain(orders.cluster).padding(0.05);
+  const initialOrder = "name";
+  const x = d3.scaleBand().range([0, width]).domain(orders[initialOrder]).padding(0.05);
+  const y = d3.scaleBand().range([0, height]).domain(orders[initialOrder]).padding(0.05);
 
   const maxCollab = d3.max(matrix.flat());
   const color = d3.scaleSequential()
-    .interpolator(d3.interpolateGreens)
-    .domain([0, maxCollab]);
+    .interpolator(t => d3.interpolateGreens(t * 0.8 + 0.2)) // tons mais escuros
+    .domain([1, maxCollab]); // ignora 0
 
   const row = svg.selectAll(".row")
-    .data(orders.cluster)
+    .data(orders[initialOrder])
     .join("g")
     .attr("class", "row")
     .attr("transform", i => `translate(0,${y(i)})`);
@@ -155,7 +160,7 @@ d3.csv("../data/spotify.csv").then(data => {
   row.each(function (rowIdx) {
     d3.select(this)
       .selectAll(".cell")
-      .data(orders.cluster.map(colIdx => ({
+      .data(orders[initialOrder].map(colIdx => ({
         x: colIdx,
         y: rowIdx,
         value: matrix[rowIdx][colIdx]
@@ -169,35 +174,23 @@ d3.csv("../data/spotify.csv").then(data => {
       .style("stroke", "#ccc")
       .on("mouseover", function (event, d) {
         if (d.value === 0) return;
+        const rowArtist = artists[d.y];
+        const colArtist = artists[d.x];
+
         tooltip.style("display", "block")
           .style("opacity", 1)
           .html(
-            `<strong>${artists[d.y].name}</strong> & <strong>${artists[d.x].name}</strong><br>${d.value} música(s) juntos`
+            `<strong>${rowArtist.name}</strong>: ${rowArtist.count} colaboração(ões)<br>` +
+            `<strong>${rowArtist.name}</strong> & <strong>${colArtist.name}</strong>: ${d.value} música(s) juntos`
           )
-          .style("left", (event.pageX + 15) + "px")
-          .style("top", (event.pageY - 20) + "px");
-      })
-      .on("mousemove", function (event) {
-        const tooltipWidth = tooltip.node().offsetWidth;
-        const tooltipHeight = tooltip.node().offsetHeight;
-        let left = event.pageX + 15;
-        let top = event.pageY - 20;
-
-        if (left + tooltipWidth > window.pageXOffset + window.innerWidth) {
-          left = event.pageX - tooltipWidth - 15;
-        }
-        if (top < window.pageYOffset) {
-          top = event.pageY + 15;
-        }
-
-        tooltip.style("left", left + "px")
-          .style("top", top + "px");
+          .style("left", `${(width + margin.left) / 2}px`)
+          .style("top", `${margin.top / 2}px`);
       })
       .on("mouseout", () => tooltip.style("opacity", 0).style("display", "none"));
   });
 
   const col = svg.selectAll(".column")
-    .data(orders.cluster)
+    .data(orders[initialOrder])
     .join("g")
     .attr("class", "column")
     .attr("transform", i => `translate(${x(i)}) rotate(-90)`);
@@ -226,7 +219,6 @@ d3.csv("../data/spotify.csv").then(data => {
             y: rowIdx,
             value: matrix[rowIdx][colIdx]
           })))
-          .join("rect")
           .transition()
           .duration(1000)
           .attr("x", d => x(d.x))
