@@ -127,7 +127,7 @@ function renderChart3(data, geoData, onCountryClick) {
       .attr("stop-color", color(popularityExtent[0] + s * (popularityExtent[1] - popularityExtent[0])));
   });
 
-  const legendX = width - legendWidth - 120;
+  const legendX = width - legendWidth - 300;
   const legendY = height - 40;
 
   svg.append("rect")
