@@ -196,24 +196,30 @@ async function renderChart4(siglaPais) {
         .style("opacity", 1)
         .html(
           `
-          <strong>${d.artist}</strong><br/>
-          Músicas no Top 50: ${totalSongs}<br/>
-          <svg width="${widthTooltip}" height="${heightTooltip}">
-            <text x="${widthTooltip / 2}" y="12" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">
-              Posição no Top 50 por mês
-            </text>
-            ${yAxisLines}
-            ${yAxisTicks}
-            <polyline
-              fill="none"
-              stroke="#0077b6"
-              stroke-width="2"
-              points="${points}"
-            />
-            ${circlesAndLabels}
-            ${xAxisLabels}
-          </svg>
-        `
+          <div style="margin-bottom: 6px;">
+            <strong>${d.artist}</strong>
+          </div>
+          <div style="margin-bottom: 10px;">
+            Músicas no Top 50: <strong>${totalSongs}</strong>
+          </div>
+          <div>
+            <svg width="${widthTooltip}" height="${heightTooltip}">
+              <text x="${widthTooltip / 2}" y="12" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">
+                Posição no Top 50 por mês
+              </text>
+              ${yAxisLines}
+              ${yAxisTicks}
+              <polyline
+                fill="none"
+                stroke="#0077b6"
+                stroke-width="2"
+                points="${points}"
+              />
+              ${circlesAndLabels}
+              ${xAxisLabels}
+            </svg>
+          </div>
+          `
         )
         .style("left", event.pageX + 15 + "px")
         .style("top", event.pageY - heightTooltip - 40 + "px");
