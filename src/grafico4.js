@@ -145,6 +145,9 @@ function renderChart4(data, siglaPais) {
           <strong>${d.artist}</strong><br/>
           Músicas no Top 50: ${totalSongs}<br/>
           <svg width="${widthTooltip}" height="${heightTooltip}">
+            <text x="${widthTooltip / 2}" y="12" text-anchor="middle" font-size="12" fill="#333" font-weight="bold">
+              Posição no Top 50 por mês
+            </text>
             ${yAxisLines}
             ${yAxisTicks}
             <polyline
