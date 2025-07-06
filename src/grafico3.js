@@ -4,7 +4,6 @@ function renderChart3(data, geoData, onCountryClick) {
   const svg = d3.select("#chart3 svg");
   svg.selectAll("*").remove();
 
-  // Criar div para exibir o país clicado, se ainda não existir
   if (d3.select("#selectedCountry").empty()) {
     d3.select("#chart3")
       .insert("div", ":first-child")
@@ -22,21 +21,14 @@ function renderChart3(data, geoData, onCountryClick) {
   const path = d3.geoPath().projection(projection);
 
   const validCountryCodes = new Set(geoData.features.map(f => f.id));
-
-  const iso3to2 = Object.fromEntries(
-    Object.entries(iso2to3).map(([iso2, iso3]) => [iso3, iso2])
-  );
+  const iso3to2 = Object.fromEntries(Object.entries(iso2to3).map(([iso2, iso3]) => [iso3, iso2]));
 
   const filteredData = data.filter(d => {
-    if (!d.country) return false;
-    const iso3 = iso2to3[d.country.trim().toUpperCase()];
+    const iso3 = iso2to3[d.country?.trim().toUpperCase()];
     return iso3 && validCountryCodes.has(iso3);
   });
 
-  const filtered2024 = filteredData.filter(d => {
-    const year = new Date(d.snapshot_date).getFullYear();
-    return year === 2024;
-  });
+  const filtered2024 = filteredData.filter(d => new Date(d.snapshot_date).getFullYear() === 2024);
 
   const popularityByCountry = d3.rollup(
     filtered2024,
@@ -45,20 +37,11 @@ function renderChart3(data, geoData, onCountryClick) {
   );
 
   const popularityValues = Array.from(popularityByCountry.values());
-  const popularityExtent = popularityValues.length
-    ? d3.extent(popularityValues)
-    : [0, 1];
+  const popularityExtent = popularityValues.length ? d3.extent(popularityValues) : [0, 1];
 
-  const color = d3
-    .scaleSequential()
-    .interpolator(d3.interpolateYlGnBu)
-    .domain(popularityExtent);
+  const color = d3.scaleSequential(d3.interpolateYlGnBu).domain(popularityExtent);
 
-  const tooltip = d3
-    .select("body")
-    .selectAll(".tooltip")
-    .data([null])
-    .join("div")
+  const tooltip = d3.select("body").selectAll(".tooltip").data([null]).join("div")
     .attr("class", "tooltip")
     .style("position", "absolute")
     .style("padding", "6px 10px")
@@ -71,8 +54,7 @@ function renderChart3(data, geoData, onCountryClick) {
     .style("display", "none")
     .style("box-shadow", "0 2px 5px rgba(0,0,0,0.1)");
 
-  svg
-    .selectAll("path")
+  svg.selectAll("path")
     .data(geoData.features)
     .join("path")
     .attr("d", path)
@@ -86,8 +68,6 @@ function renderChart3(data, geoData, onCountryClick) {
     .on("mouseover", function (event, d) {
       const iso3 = d.id;
       const val = popularityByCountry.get(iso3);
-
-      // Ignora se não houver dados
       if (val === undefined) {
         tooltip.style("opacity", 0).style("display", "none");
         return;
@@ -96,17 +76,14 @@ function renderChart3(data, geoData, onCountryClick) {
       d3.select(this).attr("stroke", "#000").attr("stroke-width", 1.5);
 
       const countryName = d.properties.name || d.properties.ADMIN || "Desconhecido";
-
       tooltip
         .style("display", "block")
         .style("opacity", 1)
-        .html(
-          `<strong>${countryName}</strong><br>Popularidade Média: ${val.toFixed(2)}`
-        )
+        .html(`<strong>${countryName}</strong><br>Popularidade Média: ${val.toFixed(2)}`)
         .style("left", event.pageX + 15 + "px")
         .style("top", event.pageY - 20 + "px");
     })
-    .on("mousemove", function (event) {
+    .on("mousemove", event => {
       tooltip
         .style("left", event.pageX + 15 + "px")
         .style("top", event.pageY - 20 + "px");
@@ -117,12 +94,21 @@ function renderChart3(data, geoData, onCountryClick) {
     })
     .on("click", function (event, d) {
       const iso3 = d.id;
+      const val = popularityByCountry.get(iso3);
+
+      if (val === undefined) {
+        // país sem dados: trata como clique fora
+        if (typeof onCountryClick === "function") {
+          onCountryClick("NENHUM");
+          d3.select("#selectedCountry").text("Clique em um país para ver os detalhes");
+        }
+        return;
+      }
+
       const iso2 = iso3to2[iso3] || iso3;
       const countryName = d.properties.name || d.properties.ADMIN || "Desconhecido";
 
-      d3.select("#selectedCountry").text(
-        `País selecionado: ${countryName} (${iso2})`
-      );
+      d3.select("#selectedCountry").text(`País selecionado: ${countryName} (${iso2})`);
 
       if (typeof onCountryClick === "function") {
         onCountryClick(iso2);
@@ -132,32 +118,19 @@ function renderChart3(data, geoData, onCountryClick) {
   // Legenda
   const legendWidth = 200;
   const legendHeight = 10;
-
   const defs = svg.append("defs");
-  const gradient = defs
-    .append("linearGradient")
-    .attr("id", "legendGradient")
-    .attr("x1", "0%")
-    .attr("y1", "0%")
-    .attr("x2", "100%")
-    .attr("y2", "0%");
-
-  const stops = d3.range(0, 1.01, 0.1);
-  stops.forEach(s => {
-    gradient
-      .append("stop")
+  const gradient = defs.append("linearGradient").attr("id", "legendGradient")
+    .attr("x1", "0%").attr("y1", "0%").attr("x2", "100%").attr("y2", "0%");
+  d3.range(0, 1.01, 0.1).forEach(s => {
+    gradient.append("stop")
       .attr("offset", `${s * 100}%`)
-      .attr(
-        "stop-color",
-        color(popularityExtent[0] + s * (popularityExtent[1] - popularityExtent[0]))
-      );
+      .attr("stop-color", color(popularityExtent[0] + s * (popularityExtent[1] - popularityExtent[0])));
   });
 
   const legendX = width - legendWidth - 120;
   const legendY = height - 40;
 
-  svg
-    .append("rect")
+  svg.append("rect")
     .attr("x", legendX)
     .attr("y", legendY)
     .attr("width", legendWidth)
@@ -165,22 +138,15 @@ function renderChart3(data, geoData, onCountryClick) {
     .style("fill", "url(#legendGradient)")
     .style("stroke", "#ccc");
 
-  const legendScale = d3
-    .scaleLinear()
-    .domain(popularityExtent)
-    .range([0, legendWidth]);
-
+  const legendScale = d3.scaleLinear().domain(popularityExtent).range([0, legendWidth]);
   const legendAxis = d3.axisBottom(legendScale).ticks(5).tickFormat(d3.format(".2f"));
 
-  svg
-    .append("g")
+  svg.append("g")
     .attr("transform", `translate(${legendX}, ${legendY + legendHeight})`)
     .call(legendAxis)
-    .selectAll("text")
-    .style("font-size", "12px");
+    .selectAll("text").style("font-size", "12px");
 
-  svg
-    .append("text")
+  svg.append("text")
     .attr("x", legendX)
     .attr("y", legendY - 8)
     .text("Popularidade Média por País")

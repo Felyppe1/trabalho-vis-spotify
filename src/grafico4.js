@@ -2,6 +2,11 @@ function renderChart4(data, siglaPais) {
   const svg = d3.select("#chart4 svg");
   svg.selectAll("*").remove();
 
+    if (siglaPais === "NENHUM") {
+      d3.select("#chart4 h2").text("");
+      return;
+    }
+
   const width = svg.node().clientWidth;
   const height = svg.node().clientHeight;
   const margin = { top: 40, right: 30, bottom: 80, left: 150 };
