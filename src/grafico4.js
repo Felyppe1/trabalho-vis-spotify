@@ -126,7 +126,7 @@ function renderChart4(data, siglaPais) {
       const monthsLabels = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
       const xAxisLabels = monthsLabels.map((m, i) => `<text x="${xTooltip(i + 1)}" y="${heightTooltip - 10}" font-size="10" text-anchor="middle">${m}</text>`).join("");
 
-      const yTicks = [1, 13, 25, 37, 50];
+      const yTicks = [1, 10, 20, 30, 40, 50];
       const yAxisTicks = yTicks.map(t => `<text x="${marginTooltip.left - 5}" y="${yTooltip(t) + 4}" font-size="10" text-anchor="end">${t}</text>`).join("");
       const yAxisLines = yTicks.map(t => `<line x1="${marginTooltip.left}" y1="${yTooltip(t)}" x2="${widthTooltip - marginTooltip.right}" y2="${yTooltip(t)}" stroke="#eee" stroke-width="1"/>`).join("");
 
