@@ -172,14 +172,7 @@ function renderChart4(data, siglaPais) {
       tooltip.style("opacity", 0);
     });
 
-  // Título
-  svg
-    .append("text")
-    .attr("x", margin.left - 20)
-    .attr("y", margin.top - 10)
-    .style("font-size", "1.5em")
-    .style("font-weight", "bold")
-    .text(`4. Top 10 artistas em ${siglaPais} (2024)`);
+  d3.select("#chart4 h2").text(`4. Top 10 artistas em ${siglaPais} (2024)`);
 }
 
 export { renderChart4 };
