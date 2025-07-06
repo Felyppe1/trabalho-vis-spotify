@@ -21,14 +21,13 @@ function renderChart3(data, geoData, onCountryClick) {
   const projection = d3.geoMercator().fitSize([width, height], geoData);
   const path = d3.geoPath().projection(projection);
 
-  const validCountryCodes = new Set(geoData.features.map((f) => f.id));
+  const validCountryCodes = new Set(geoData.features.map(f => f.id));
 
-  // Criar mapa inverso ISO3 -> ISO2 para usar no clique
   const iso3to2 = Object.fromEntries(
     Object.entries(iso2to3).map(([iso2, iso3]) => [iso3, iso2])
   );
 
-  const filteredData = data.filter((d) => {
+  const filteredData = data.filter(d => {
     if (!d.country) return false;
     const iso3 = iso2to3[d.country.trim().toUpperCase()];
     return iso3 && validCountryCodes.has(iso3);
@@ -50,7 +49,6 @@ function renderChart3(data, geoData, onCountryClick) {
     ? d3.extent(popularityValues)
     : [0, 1];
 
-
   const color = d3
     .scaleSequential()
     .interpolator(d3.interpolateYlGnBu)
@@ -70,6 +68,7 @@ function renderChart3(data, geoData, onCountryClick) {
     .style("font-size", "14px")
     .style("pointer-events", "none")
     .style("opacity", 0)
+    .style("display", "none")
     .style("box-shadow", "0 2px 5px rgba(0,0,0,0.1)");
 
   svg
@@ -77,7 +76,7 @@ function renderChart3(data, geoData, onCountryClick) {
     .data(geoData.features)
     .join("path")
     .attr("d", path)
-    .attr("fill", (d) => {
+    .attr("fill", d => {
       const iso3 = d.id;
       const val = popularityByCountry.get(iso3);
       return val !== undefined ? color(val) : "#eee";
@@ -85,19 +84,24 @@ function renderChart3(data, geoData, onCountryClick) {
     .attr("stroke", "#ccc")
     .attr("stroke-width", 0.5)
     .on("mouseover", function (event, d) {
-      d3.select(this).attr("stroke", "#000").attr("stroke-width", 1.5);
-
       const iso3 = d.id;
       const val = popularityByCountry.get(iso3);
-      const countryName =
-        d.properties.name || d.properties.ADMIN || "Desconhecido";
+
+      // Ignora se não houver dados
+      if (val === undefined) {
+        tooltip.style("opacity", 0).style("display", "none");
+        return;
+      }
+
+      d3.select(this).attr("stroke", "#000").attr("stroke-width", 1.5);
+
+      const countryName = d.properties.name || d.properties.ADMIN || "Desconhecido";
 
       tooltip
+        .style("display", "block")
         .style("opacity", 1)
         .html(
-          `<strong>${countryName}</strong><br>Popularidade Média: ${
-            val !== undefined ? val.toFixed(2) : "Sem dados"
-          }`
+          `<strong>${countryName}</strong><br>Popularidade Média: ${val.toFixed(2)}`
         )
         .style("left", event.pageX + 15 + "px")
         .style("top", event.pageY - 20 + "px");
@@ -109,13 +113,12 @@ function renderChart3(data, geoData, onCountryClick) {
     })
     .on("mouseout", function () {
       d3.select(this).attr("stroke", "#ccc").attr("stroke-width", 0.5);
-      tooltip.style("opacity", 0);
+      tooltip.style("opacity", 0).style("display", "none");
     })
     .on("click", function (event, d) {
       const iso3 = d.id;
       const iso2 = iso3to2[iso3] || iso3;
-      const countryName =
-        d.properties.name || d.properties.ADMIN || "Desconhecido";
+      const countryName = d.properties.name || d.properties.ADMIN || "Desconhecido";
 
       d3.select("#selectedCountry").text(
         `País selecionado: ${countryName} (${iso2})`
@@ -140,16 +143,13 @@ function renderChart3(data, geoData, onCountryClick) {
     .attr("y2", "0%");
 
   const stops = d3.range(0, 1.01, 0.1);
-  stops.forEach((s) => {
+  stops.forEach(s => {
     gradient
       .append("stop")
       .attr("offset", `${s * 100}%`)
       .attr(
         "stop-color",
-        color(
-          popularityExtent[0] +
-            s * (popularityExtent[1] - popularityExtent[0])
-        )
+        color(popularityExtent[0] + s * (popularityExtent[1] - popularityExtent[0]))
       );
   });
 
@@ -170,10 +170,7 @@ function renderChart3(data, geoData, onCountryClick) {
     .domain(popularityExtent)
     .range([0, legendWidth]);
 
-  const legendAxis = d3
-    .axisBottom(legendScale)
-    .ticks(5)
-    .tickFormat(d3.format(".2f"));
+  const legendAxis = d3.axisBottom(legendScale).ticks(5).tickFormat(d3.format(".2f"));
 
   svg
     .append("g")
