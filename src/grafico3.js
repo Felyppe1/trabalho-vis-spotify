@@ -175,7 +175,7 @@ async function renderChart3(geoData, onCountryClick) {
   svg.append("text")
     .attr("x", legendX)
     .attr("y", legendY - 8)
-    .text("Popularidade Média por País")
+    .text("Popularidade Média das Músicas")
     .style("font-size", "14px")
     .style("fill", "#333");
 }
