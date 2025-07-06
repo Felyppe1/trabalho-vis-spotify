@@ -1,6 +1,7 @@
 import { renderChart3 } from "./grafico3.js";
 import { renderChart4 } from "./grafico4.js";
 import { grafico2 } from "./grafico2.js";
+import { initializeDatabase } from "./dataLoader.js";
 document.addEventListener("DOMContentLoaded", () => {
   const loadingOverlay = document.getElementById("loadingOverlay");
   const progressBar = document.getElementById("progressBar");
@@ -34,35 +35,34 @@ document.addEventListener("DOMContentLoaded", () => {
     let resultString = new TextDecoder("utf-8").decode(chunksAll);
     return d3.csvParse(resultString, d3.autoType);
   }
-
   async function main() {
     try {
-      progressText.textContent = "Carregando CSV do Spotify...";
+      progressText.textContent = "Inicializando banco de dados...";
+      await initializeDatabase();
+      console.log("Banco de dados inicializado");
+
+      progressText.textContent = "Carregando dados do Spotify...";
+      progressBar.style.width = "50%";
+
       const data = await loadCSVWithProgress(
-        "./data/spotify.csv",
-        (progress) => {
-          let p = Math.floor(progress * 100);
-          progressBar.style.width = `${p}%`;
-          progressText.textContent = `Carregando CSV do Spotify... ${p}%`;
-        }
+        "./data/spotify.csv"
       );
-      console.log("CSV carregado:", data.length, "registros");
+
+      data.forEach(d => {
+            d.album_release_date = new Date(new Date(d.album_release_date).getTime() + 3 * 60 * 60 * 1000);
+        });
 
       progressText.textContent = "Carregando GeoJSON do mundo...";
-      progressBar.style.width = `0%`;
+      progressBar.style.width = "75%";
       const geoData = await d3.json("./data/world.geojson");
       console.log("GeoJSON carregado:", geoData.features.length, "features");
 
       progressBar.style.width = "100%";
       progressText.textContent = "Dados carregados. Preparando visualização...";
       await new Promise((r) => setTimeout(r, 500));
-
       loadingOverlay.style.display = "none";
-    data.forEach(d => {
-        d.album_release_date = new Date(new Date(d.album_release_date).getTime() + 3 * 60 * 60 * 1000);
-    });
 
-      grafico2(data);
+      await grafico2();
       renderChart3(data, geoData, function (siglaPais) {
         renderChart4(data, siglaPais);
       });

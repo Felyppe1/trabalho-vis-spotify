@@ -1,1 +1,2 @@
-spotify.csv
+*.csv
+node_modules
