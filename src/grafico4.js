@@ -85,14 +85,14 @@ async function renderChart4(siglaPais) {
   }
 
   const top10 = Array.from(artistData.values()).sort(
-    (a, b) => b.score - a.score
+    (a, b) => b.songCount - a.songCount
   );
   const songCountMap = new Map(top10.map((d) => [d.artist, d.songCount]));
   const lineMap = new Map(top10.map((d) => [d.artist, d.lineData]));
 
   const x = d3
     .scaleLinear()
-    .domain([0, d3.max(top10, (d) => d.score)])
+    .domain([0, d3.max(top10, (d) => d.songCount)])
     .range([margin.left, width - margin.right]);
 
   const y = d3
@@ -101,7 +101,6 @@ async function renderChart4(siglaPais) {
     .range([margin.top, height - margin.bottom])
     .padding(0.1);
 
-  // Degradê de verde para os 10 artistas
   const color = d3.scaleOrdinal()
     .domain(top10.map((_, i) => i))
     .range(d3.range(0, 1, 1 / 10).map(t => d3.interpolateGreens(1 - t * 0.6)));
@@ -139,7 +138,7 @@ async function renderChart4(siglaPais) {
     .join("rect")
     .attr("x", x(0))
     .attr("y", (d) => y(d.artist))
-    .attr("width", (d) => x(d.score) - x(0))
+    .attr("width", (d) => x(d.songCount) - x(0))
     .attr("height", y.bandwidth())
     .attr("fill", (_, i) => color(i))
     .on("mouseover", function (event, d) {
@@ -164,18 +163,8 @@ async function renderChart4(siglaPais) {
         .join(" ");
 
       const monthsLabels = [
-        "Jan",
-        "Fev",
-        "Mar",
-        "Abr",
-        "Mai",
-        "Jun",
-        "Jul",
-        "Ago",
-        "Set",
-        "Out",
-        "Nov",
-        "Dez",
+        "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
+        "Jul", "Ago", "Set", "Out", "Nov", "Dez",
       ];
       const xAxisLabels = monthsLabels
         .map(
@@ -238,7 +227,7 @@ async function renderChart4(siglaPais) {
       tooltip.style("opacity", 0);
     });
 
-  d3.select("#chart4 h2").text(`4. Top 10 artistas em ${siglaPais} (2024)`);
+  d3.select("#chart4 h2").text(`4. Top 10 artistas em ${siglaPais} por nº de músicas no Top 50 (2024)`);
 }
 
 export { renderChart4 };
