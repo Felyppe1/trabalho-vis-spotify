@@ -1,6 +1,7 @@
 import { iso2to3 } from "../data/iso2to3.js";
+import { executeQuery } from "./dataLoader.js";
 
-function renderChart3(data, geoData, onCountryClick) {
+async function renderChart3(geoData, onCountryClick) {
   const svg = d3.select("#chart3 svg");
   svg.selectAll("*").remove();
 
@@ -20,21 +21,32 @@ function renderChart3(data, geoData, onCountryClick) {
   const projection = d3.geoMercator().fitSize([width, height], geoData);
   const path = d3.geoPath().projection(projection);
 
-  const validCountryCodes = new Set(geoData.features.map(f => f.id));
-  const iso3to2 = Object.fromEntries(Object.entries(iso2to3).map(([iso2, iso3]) => [iso3, iso2]));
+  const validCountryCodes = new Set(geoData.features.map((f) => f.id));
 
-  const filteredData = data.filter(d => {
-    const iso3 = iso2to3[d.country?.trim().toUpperCase()];
-    return iso3 && validCountryCodes.has(iso3);
-  });
-
-  const filtered2024 = filteredData.filter(d => new Date(d.snapshot_date).getFullYear() === 2024);
-
-  const popularityByCountry = d3.rollup(
-    filtered2024,
-    v => d3.mean(v, d => d.popularity),
-    d => iso2to3[d.country.trim().toUpperCase()]
+  const iso3to2 = Object.fromEntries(
+    Object.entries(iso2to3).map(([iso2, iso3]) => [iso3, iso2])
   );
+
+  const query = `
+    SELECT
+        country,
+        AVG(popularity) as avg_popularity
+    FROM spotify
+    WHERE EXTRACT(year FROM CAST(snapshot_date AS DATE)) = 2024 AND country IS NOT NULL
+    GROUP BY country
+  `;
+
+  const queryResult = await executeQuery(query);
+
+  const popularityByCountry = new Map();
+  for (const row of queryResult) {
+    if (row.country) {
+      const iso3 = iso2to3[row.country.trim().toUpperCase()];
+      if (iso3 && validCountryCodes.has(iso3)) {
+        popularityByCountry.set(iso3, row.avg_popularity);
+      }
+    }
+  }
 
   const popularityValues = Array.from(popularityByCountry.values());
   const popularityExtent = popularityValues.length ? d3.extent(popularityValues) : [0, 1];
@@ -58,7 +70,7 @@ function renderChart3(data, geoData, onCountryClick) {
     .data(geoData.features)
     .join("path")
     .attr("d", path)
-    .attr("fill", d => {
+    .attr("fill", (d) => {
       const iso3 = d.id;
       const val = popularityByCountry.get(iso3);
       return val !== undefined ? color(val) : "#eee";
@@ -106,7 +118,8 @@ function renderChart3(data, geoData, onCountryClick) {
       }
 
       const iso2 = iso3to2[iso3] || iso3;
-      const countryName = d.properties.name || d.properties.ADMIN || "Desconhecido";
+      const countryName =
+        d.properties.name || d.properties.ADMIN || "Desconhecido";
 
       d3.select("#selectedCountry").text(`País selecionado: ${countryName} (${iso2})`);
 
@@ -119,12 +132,25 @@ function renderChart3(data, geoData, onCountryClick) {
   const legendWidth = 200;
   const legendHeight = 10;
   const defs = svg.append("defs");
-  const gradient = defs.append("linearGradient").attr("id", "legendGradient")
-    .attr("x1", "0%").attr("y1", "0%").attr("x2", "100%").attr("y2", "0%");
-  d3.range(0, 1.01, 0.1).forEach(s => {
-    gradient.append("stop")
+  const gradient = defs
+    .append("linearGradient")
+    .attr("id", "legendGradient")
+    .attr("x1", "0%")
+    .attr("y1", "0%")
+    .attr("x2", "100%")
+    .attr("y2", "0%");
+
+  const stops = d3.range(0, 1.01, 0.1);
+  stops.forEach((s) => {
+    gradient
+      .append("stop")
       .attr("offset", `${s * 100}%`)
-      .attr("stop-color", color(popularityExtent[0] + s * (popularityExtent[1] - popularityExtent[0])));
+      .attr(
+        "stop-color",
+        color(
+          popularityExtent[0] + s * (popularityExtent[1] - popularityExtent[0])
+        )
+      );
   });
 
   const legendX = width - legendWidth - 300;

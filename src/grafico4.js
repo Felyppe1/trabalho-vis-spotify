@@ -1,4 +1,6 @@
-function renderChart4(data, siglaPais) {
+import { executeQuery } from "./dataLoader.js";
+
+async function renderChart4(siglaPais) {
   const svg = d3.select("#chart4 svg");
   svg.selectAll("*").remove();
 
@@ -11,50 +13,82 @@ function renderChart4(data, siglaPais) {
   const height = svg.node().clientHeight;
   const margin = { top: 40, right: 30, bottom: 80, left: 150 };
 
-  const filtered = data.filter((d) => {
-    return d.country === siglaPais && new Date(d.snapshot_date).getFullYear() === 2024;
-  });
+  const query = `
+    WITH artist_tracks AS (
+        SELECT 
+            TRIM(UNNEST(string_split(artists, ','))) as artist, 
+            daily_rank, 
+            spotify_id, 
+            snapshot_date
+        FROM spotify
+        WHERE country = '${siglaPais}' AND EXTRACT(year FROM CAST(snapshot_date AS DATE)) = 2024
+    ),
+    artist_scores AS (
+        SELECT 
+            artist,
+            SUM(51 - daily_rank) as score
+        FROM artist_tracks
+        GROUP BY artist
+    ),
+    top_10_artists AS (
+        SELECT artist, score
+        FROM artist_scores
+        ORDER BY score DESC
+        LIMIT 10
+    ),
+    song_counts AS (
+        SELECT 
+            artist,
+            COUNT(DISTINCT spotify_id) as song_count
+        FROM artist_tracks
+        WHERE daily_rank <= 50 AND artist IN (SELECT artist FROM top_10_artists)
+        GROUP BY artist
+    ),
+    monthly_ranks AS (
+        SELECT 
+            artist,
+            EXTRACT(month FROM CAST(snapshot_date AS DATE)) as month,
+            MIN(daily_rank) as min_rank
+        FROM artist_tracks
+        WHERE artist IN (SELECT artist FROM top_10_artists)
+        GROUP BY artist, month
+    )
+    SELECT 
+        t.artist,
+        t.score,
+        CAST(COALESCE(s.song_count, 0) AS INTEGER) as song_count,
+        CAST(m.month AS INTEGER) as month,
+        CAST(m.min_rank AS INTEGER) as min_rank
+    FROM top_10_artists t
+    LEFT JOIN song_counts s ON t.artist = s.artist
+    LEFT JOIN monthly_ranks m ON t.artist = m.artist
+    ORDER BY t.score DESC, m.month ASC
+  `;
 
-  const allTracks = filtered.flatMap((d) => {
-    const artists = d.artists.split(",").map((a) => a.trim());
-    return artists.map((artist) => ({
-      ...d,
-      artist,
-    }));
-  });
+  const queryResult = await executeQuery(query);
 
-  const scoreByArtist = d3.rollups(
-    allTracks,
-    (v) => d3.sum(v, (d) => 51 - d.daily_rank),
-    (d) => d.artist
+  const artistData = new Map();
+  for (const row of queryResult) {
+    if (!artistData.has(row.artist)) {
+      artistData.set(row.artist, {
+        artist: row.artist,
+        score: row.score,
+        songCount: row.song_count,
+        lineData: [],
+      });
+    }
+    if (row.month && row.min_rank) {
+      artistData
+        .get(row.artist)
+        .lineData.push({ month: row.month, rank: row.min_rank });
+    }
+  }
+
+  const top10 = Array.from(artistData.values()).sort(
+    (a, b) => b.score - a.score
   );
-
-  const top10 = scoreByArtist
-    .sort((a, b) => d3.descending(a[1], b[1]))
-    .slice(0, 10)
-    .map(([artist, score]) => ({ artist, score }));
-
-  const songCount = d3.rollups(
-    allTracks.filter((d) => d.daily_rank <= 50),
-    (v) => new Set(v.map((d) => d.spotify_id)).size,
-    (d) => d.artist
-  );
-  const songCountMap = new Map(songCount);
-
-  const lineDataByArtist = d3.rollups(
-    allTracks.filter((d) => top10.some((a) => a.artist === d.artist)),
-    (v) => d3.min(v, (d) => d.daily_rank),
-    (d) => d.artist,
-    (d) => new Date(d.snapshot_date).getMonth() + 1
-  );
-
-  const lineMap = new Map();
-  lineDataByArtist.forEach(([artist, values]) => {
-    lineMap.set(
-      artist,
-      values.map(([month, rank]) => ({ month, rank }))
-    );
-  });
+  const songCountMap = new Map(top10.map((d) => [d.artist, d.songCount]));
+  const lineMap = new Map(top10.map((d) => [d.artist, d.lineData]));
 
   const x = d3
     .scaleLinear()
@@ -116,32 +150,63 @@ function renderChart4(data, siglaPais) {
       const heightTooltip = 100;
       const marginTooltip = { left: 40, right: 20, top: 20, bottom: 30 };
 
-      const xTooltip = d3.scaleLinear().domain([1, 12]).range([marginTooltip.left, widthTooltip - marginTooltip.right]);
-      const yTooltip = d3.scaleLinear().domain([50, 1]).range([heightTooltip - marginTooltip.bottom, marginTooltip.top]);
+      const xTooltip = d3
+        .scaleLinear()
+        .domain([1, 12])
+        .range([marginTooltip.left, widthTooltip - marginTooltip.right]);
+      const yTooltip = d3
+        .scaleLinear()
+        .domain([50, 1])
+        .range([heightTooltip - marginTooltip.bottom, marginTooltip.top]);
 
       const points = lines
-        .map(p => `${xTooltip(p.month)},${yTooltip(p.rank)}`)
+        .map((p) => `${xTooltip(p.month)},${yTooltip(p.rank)}`)
         .join(" ");
 
-      const monthsLabels = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
-      const xAxisLabels = monthsLabels.map((m, i) => `<text x="${xTooltip(i + 1)}" y="${heightTooltip - 10}" font-size="10" text-anchor="middle">${m}</text>`).join("");
+      const monthsLabels = [
+        "Jan",
+        "Fev",
+        "Mar",
+        "Abr",
+        "Mai",
+        "Jun",
+        "Jul",
+        "Ago",
+        "Set",
+        "Out",
+        "Nov",
+        "Dez",
+      ];
+      const xAxisLabels = monthsLabels
+        .map(
+          (m, i) =>
+            `<text x="${xTooltip(i + 1)}" y="${
+              heightTooltip - 10
+            }" font-size="10" text-anchor="middle">${m}</text>`
+        )
+        .join("");
 
       const yTicks = [1, 10, 20, 30, 40, 50];
       const yAxisTicks = yTicks.map(t => `<text x="${marginTooltip.left - 5}" y="${yTooltip(t) + 4}" font-size="10" text-anchor="end">${t}</text>`).join("");
       const yAxisLines = yTicks.map(t => `<line x1="${marginTooltip.left}" y1="${yTooltip(t)}" x2="${widthTooltip - marginTooltip.right}" y2="${yTooltip(t)}" stroke="#eee" stroke-width="1"/>`).join("");
 
-      const circlesAndLabels = lines.map(p => {
-        const cx = xTooltip(p.month);
-        const cy = yTooltip(p.rank);
-        return `
+      const circlesAndLabels = lines
+        .map((p) => {
+          const cx = xTooltip(p.month);
+          const cy = yTooltip(p.rank);
+          return `
           <circle cx="${cx}" cy="${cy}" r="3" fill="#0077b6" />
-          <text x="${cx + 5}" y="${cy + 4}" font-size="9" fill="#333">${p.rank}</text>
+          <text x="${cx + 5}" y="${cy + 4}" font-size="9" fill="#333">${
+            p.rank
+          }</text>
         `;
-      }).join("");
+        })
+        .join("");
 
       tooltip
         .style("opacity", 1)
-        .html(`
+        .html(
+          `
           <strong>${d.artist}</strong><br/>
           Músicas no Top 50: ${totalSongs}<br/>
           <svg width="${widthTooltip}" height="${heightTooltip}">
@@ -159,7 +224,8 @@ function renderChart4(data, siglaPais) {
             ${circlesAndLabels}
             ${xAxisLabels}
           </svg>
-        `)
+        `
+        )
         .style("left", event.pageX + 15 + "px")
         .style("top", event.pageY - heightTooltip - 40 + "px");
     })

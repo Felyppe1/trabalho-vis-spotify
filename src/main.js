@@ -1,40 +1,13 @@
 import { renderChart3 } from "./grafico3.js";
 import { renderChart4 } from "./grafico4.js";
 import { grafico2 } from "./grafico2.js";
+import { grafico1 } from "./grafico1.js";
 import { initializeDatabase } from "./dataLoader.js";
 document.addEventListener("DOMContentLoaded", () => {
   const loadingOverlay = document.getElementById("loadingOverlay");
   const progressBar = document.getElementById("progressBar");
   const progressText = document.getElementById("progressText");
 
-  async function loadCSVWithProgress(url, onProgress) {
-    const response = await fetch(url);
-    if (!response.ok)
-      throw new Error(`Erro ao buscar ${url}: ${response.statusText}`);
-
-    const reader = response.body.getReader();
-    const contentLength = +response.headers.get("Content-Length");
-    let receivedLength = 0; // bytes lidos
-    let chunks = []; // array de Uint8Arrays
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(value);
-      receivedLength += value.length;
-      if (onProgress) onProgress(receivedLength / contentLength);
-    }
-
-    // concatenar chunks em uma string
-    let chunksAll = new Uint8Array(receivedLength);
-    let position = 0;
-    for (let chunk of chunks) {
-      chunksAll.set(chunk, position);
-      position += chunk.length;
-    }
-    let resultString = new TextDecoder("utf-8").decode(chunksAll);
-    return d3.csvParse(resultString, d3.autoType);
-  }
   async function main() {
     try {
       progressText.textContent = "Inicializando banco de dados...";
@@ -44,28 +17,22 @@ document.addEventListener("DOMContentLoaded", () => {
       progressText.textContent = "Carregando dados do Spotify...";
       progressBar.style.width = "50%";
 
-      const data = await loadCSVWithProgress(
-        "./data/spotify.csv"
-      );
-
-      data.forEach(d => {
-            d.album_release_date = new Date(new Date(d.album_release_date).getTime() + 3 * 60 * 60 * 1000);
-        });
-
       progressText.textContent = "Carregando GeoJSON do mundo...";
       progressBar.style.width = "75%";
       const geoData = await d3.json("./data/world.geojson");
-      console.log("GeoJSON carregado:", geoData.features.length, "features");
+      progressText.textContent = "Construindo gráficos...";
+      progressBar.style.width = "90%";
+
+      await grafico1();
+      await grafico2();
+      await renderChart3(geoData, function (siglaPais) {
+        renderChart4(siglaPais);
+      });
 
       progressBar.style.width = "100%";
-      progressText.textContent = "Dados carregados. Preparando visualização...";
+      progressText.textContent = "Tudo pronto!";
       await new Promise((r) => setTimeout(r, 500));
       loadingOverlay.style.display = "none";
-
-      await grafico2();
-      renderChart3(data, geoData, function (siglaPais) {
-        renderChart4(data, siglaPais);
-      });
     } catch (error) {
       console.error("Erro no carregamento dos dados:", error);
       alert("Erro no carregamento dos dados: veja o console");

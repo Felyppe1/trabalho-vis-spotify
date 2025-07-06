@@ -161,7 +161,7 @@ export async function grafico2() {
   const tooltip = d3
     .select("body")
     .append("div")
-    .attr("class", "tooltip")
+    .attr("class", "tooltip2")
     .style("position", "absolute")
     .style("padding", "10px 12px")
     .style("background", "white")

@@ -1,60 +1,57 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Spotify - Visualização Interativa Otimizada</title>
-  <link rel="stylesheet" href="index.css" />
-  <script src="https://d3js.org/d3.v7.min.js"></script>
-</head>
-<body>
-  <div id="loadingOverlay">
-    <div class="spinner"></div>
-    <div id="progressContainer">
-      <div id="progressBar"></div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Spotify - Visualização Interativa Otimizada</title>
+    <link rel="stylesheet" href="index.css" />
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+  </head>
+  <body>
+    <div id="loadingOverlay">
+      <div class="spinner"></div>
+      <div id="progressContainer">
+        <div id="progressBar"></div>
+      </div>
+      <div id="progressText">Carregando dados...</div>
     </div>
-    <div id="progressText">Carregando dados...</div>
-  </div>
 
-  <div class="container">
-    <h1><img src="logo.png" alt="Logo"> Spotify - Análise Visual Interativa</h1>
+    <div class="container">
+      <h1>
+        <img src="logo.png" alt="Logo" /> Spotify - Análise Visual Interativa
+      </h1>
 
-    <div class="chart" id="chart1">
+      <div class="chart" id="chart1">
         <h2>1. Artistas que mais colaboraram entre si em 2024</h2>
 
-        <div style="text-align:center; margin-bottom: 10px;">
-            Ordem: 
-            <select id="order">
+        <div style="text-align: center; margin-bottom: 10px">
+          Ordem:
+          <select id="order">
             <option value="name" selected>Por nome</option>
             <option value="count">Por número de colaborações</option>
             <option value="cluster">Por similaridade</option>
-            </select>
+          </select>
         </div>
 
         <div id="heatmap"></div>
-
-    </div>
-
-    <div class="chart" id="chart2">
-      <h2>2. Duração das músicas ao longo do tempo</h2>
-      <svg></svg>
-    </div>
-    <div class="containerg34">
-      <div id="chart3" class="chart">
-        <h2>3. Países que mais escutam música</h2>
-        <svg></svg>
       </div>
 
-      <div class="chart" id="chart4">
-        <h2></h2>
+      <div class="chart" id="chart2">
+        <h2>2. Duração das músicas ao longo do tempo</h2>
         <svg></svg>
       </div>
+      <div class="containerg34">
+        <div id="chart3" class="chart">
+          <h2>3. Países que mais escutam música</h2>
+          <svg></svg>
+        </div>
+
+        <div class="chart" id="chart4">
+          <h2></h2>
+          <svg></svg>
+        </div>
+      </div>
     </div>
-
-  </div>
-
-  <script type="module" src="src/main.js"></script>
-  <script type="module" src="./src/grafico1.js"></script>
-
-</body>
+    <script type="module" src="src/main.js"></script>
+  </body>
 </html>
