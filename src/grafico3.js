@@ -153,7 +153,7 @@ function renderChart3(data, geoData, onCountryClick) {
       );
   });
 
-  const legendX = width - legendWidth - 20;
+  const legendX = width - legendWidth - 120;
   const legendY = height - 40;
 
   svg

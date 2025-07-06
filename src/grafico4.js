@@ -175,11 +175,11 @@ function renderChart4(data, siglaPais) {
   // Título
   svg
     .append("text")
-    .attr("x", margin.left)
-    .attr("y", margin.top - 20)
-    .style("font-size", "16px")
+    .attr("x", margin.left - 20)
+    .attr("y", margin.top - 10)
+    .style("font-size", "1.5em")
     .style("font-weight", "bold")
-    .text(`Top 10 artistas em ${siglaPais} (2024)`);
+    .text(`4. Top 10 artistas em ${siglaPais} (2024)`);
 }
 
 export { renderChart4 };
